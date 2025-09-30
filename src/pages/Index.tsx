@@ -1,12 +1,46 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useEffect } from "react";
+import Header from "@/components/Header";
+import Hero from "@/components/Hero";
+import Tours from "@/components/Tours";
+import Services from "@/components/Services";
+import Reviews from "@/components/Reviews";
+import Contact from "@/components/Contact";
+import Footer from "@/components/Footer";
 
 const Index = () => {
+  const [language, setLanguage] = useState("mr"); // Default to Marathi
+  const [fontSize, setFontSize] = useState(16);
+
+  const toggleLanguage = () => {
+    setLanguage((prev) => (prev === "mr" ? "en" : "mr"));
+  };
+
+  const increaseFontSize = () => {
+    setFontSize((prev) => Math.min(prev + 2, 24));
+  };
+
+  const decreaseFontSize = () => {
+    setFontSize((prev) => Math.max(prev - 2, 12));
+  };
+
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${fontSize}px`;
+  }, [fontSize]);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen">
+      <Header
+        language={language}
+        toggleLanguage={toggleLanguage}
+        increaseFontSize={increaseFontSize}
+        decreaseFontSize={decreaseFontSize}
+      />
+      <Hero language={language} />
+      <Tours language={language} />
+      <Services language={language} />
+      <Reviews language={language} />
+      <Contact language={language} />
+      <Footer language={language} />
     </div>
   );
 };
