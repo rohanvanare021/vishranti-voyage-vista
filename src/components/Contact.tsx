@@ -5,10 +5,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { MapPin, Phone, Mail, Clock } from "lucide-react";
+import { z } from "zod";
 
 interface ContactProps {
   language: string;
 }
+
+// Validation schema for security
+const contactSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
+  email: z.string().trim().email("Invalid email address").max(255, "Email must be less than 255 characters").optional().or(z.literal("")),
+  phone: z.string().trim().min(1, "Phone is required").max(20, "Phone must be less than 20 characters"),
+  message: z.string().trim().min(1, "Message is required").max(1000, "Message must be less than 1000 characters"),
+});
 
 const Contact = ({ language }: ContactProps) => {
   const [formData, setFormData] = useState({
@@ -17,29 +26,86 @@ const Contact = ({ language }: ContactProps) => {
     phone: "",
     message: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Replace with your Web3Forms access key
+  // Get yours free at: https://web3forms.com/
+  const WEB3FORMS_ACCESS_KEY = "YOUR_WEB3FORMS_ACCESS_KEY_HERE";
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
-    if (!formData.name || !formData.phone || !formData.message) {
+    // Validate form data
+    try {
+      contactSchema.parse(formData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(
+          language === "mr"
+            ? "कृपया सर्व माहिती योग्यरित्या भरा"
+            : "Please fill all fields correctly"
+        );
+        return;
+      }
+    }
+
+    // Check if access key is configured
+    if (WEB3FORMS_ACCESS_KEY === "YOUR_WEB3FORMS_ACCESS_KEY_HERE") {
       toast.error(
         language === "mr"
-          ? "कृपया सर्व आवश्यक माहिती भरा"
-          : "Please fill all required fields"
+          ? "Web3Forms चावी कॉन्फिगर करा"
+          : "Please configure Web3Forms access key"
       );
+      console.error("⚠️ Web3Forms access key not configured. Get yours at https://web3forms.com/");
       return;
     }
 
-    // In a real app, this would send data to a server
-    toast.success(
-      language === "mr"
-        ? "धन्यवाद! आम्ही लवकरच संपर्क करू"
-        : "Thank you! We will contact you soon"
-    );
-    
-    // Reset form
-    setFormData({ name: "", email: "", phone: "", message: "" });
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_ACCESS_KEY,
+          name: formData.name,
+          email: formData.email || "noreply@vishrantitours.com",
+          phone: formData.phone,
+          message: formData.message,
+          from_name: "Vishranti Tours Website",
+          subject: language === "mr" 
+            ? `नवीन संदेश ${formData.name} कडून` 
+            : `New message from ${formData.name}`,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(
+          language === "mr"
+            ? "धन्यवाद! आम्ही लवकरच संपर्क करू"
+            : "Thank you! We will contact you soon"
+        );
+        
+        // Reset form
+        setFormData({ name: "", email: "", phone: "", message: "" });
+      } else {
+        throw new Error(data.message || "Failed to send message");
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error(
+        language === "mr"
+          ? "संदेश पाठवताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा"
+          : "Error sending message. Please try again"
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const contactInfo = [
@@ -180,10 +246,13 @@ const Contact = ({ language }: ContactProps) => {
 
                 <Button
                   type="submit"
-                  className="w-full bg-secondary hover:bg-secondary/90 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                  disabled={isSubmitting}
+                  className="w-full bg-secondary hover:bg-secondary/90 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   size="lg"
                 >
-                  {language === "mr" ? "संदेश पाठवा" : "Send Message"}
+                  {isSubmitting 
+                    ? (language === "mr" ? "पाठवत आहे..." : "Sending...") 
+                    : (language === "mr" ? "संदेश पाठवा" : "Send Message")}
                 </Button>
               </form>
             </CardContent>
